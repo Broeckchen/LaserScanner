@@ -1,11 +1,18 @@
 import java.awt.image.BufferedImage;
+<<<<<<< HEAD
 import java.awt.image.Raster;
 import java.io.File;
 import java.io.IOException;
 
 
 import javax.imageio.ImageIO;
+=======
+import java.io.File;
+import java.io.IOException;
+import java.util.Random;
+>>>>>>> addedLibrary Commit without comments
 
+import javax.imageio.ImageIO;
 
 public class MainClass {
 
@@ -34,13 +41,36 @@ public class MainClass {
 				System.out.println(i);
 			}
 			
-			//use measurement to create a map of estimated positions
+			// use measurement to create a map of estimated positions
 			PositionFinder estimator = new PositionFinder();
-			BufferedImage likelihoodmap = estimator.generateMap(measurements);
+			
+			double[][] probabilities = estimator.generateMapSummingUp();
+			BufferedImage likelihoodmap = estimator.generatePicture(probabilities);
+			
+			File outputFile = new File("summedUpGeneralMap.png");
+			ImageIO.write(likelihoodmap, "png", outputFile);
+		
+			probabilities = estimator.generateMapLowestDistance();
+			likelihoodmap = estimator.generatePicture(probabilities);
+		
+			outputFile = new File("lowestDistanceGeneralMap.png");
+			ImageIO.write(likelihoodmap, "png", outputFile);
+		
+			probabilities = estimator.generateMap(measurements,true);
+			likelihoodmap = estimator.generatePicture(probabilities);
+		
+			outputFile = new File("lowestDistancePositionMap.png");
+			ImageIO.write(likelihoodmap, "png", outputFile);
+		
+			probabilities = estimator.generateMap(measurements,false);
+			likelihoodmap = estimator.generatePicture(probabilities);
+		
+			outputFile = new File("summedUpPositionMap.png");
+			ImageIO.write(likelihoodmap, "png", outputFile);
+
 		} catch (IOException e) {
 
 			e.printStackTrace();
 		}
-		
 	}
 }
