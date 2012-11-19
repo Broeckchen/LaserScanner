@@ -1,14 +1,18 @@
 
+/*
+ * This class describes the parameters
+ * for the model sensor
+ */
 public class ModelParameters {
 
-	private int lazerRange;
-	private int angleRange;
-	private int angleStep;
+	private int lazerRange;	// The range of the laser in m
+	private int angleRange;	// The angle range in degrees
+	private int angleStep;	// The angle step in degrees
 
-	private double zSmall;
-	private int cmPerPixel;
-	private double l;
-	private double b;
+	private double zSmall;	// A small measurement in m
+	private int cmPerPixel;	// how many cm describe a pixel
+	private double l;		// the parameter of the unexpected obstacle probability
+	private double b;		// the parameter of the expected obstacle probability
 	
 	public ModelParameters(int lazerRange,int cmPerPixel, int angleRange, int angleStep, double l, double b, double zSmall){
 		this.lazerRange = lazerRange;

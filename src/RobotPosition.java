@@ -1,6 +1,10 @@
 
 public class RobotPosition {
-
+/*
+ * This class describes the position of the
+ * robot in axis x, y and its angle  theta.
+ * Theta is defined in degrees [0, 360)
+ */
 	private int x;
 	private int y;
 	private int theta;

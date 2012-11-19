@@ -4,13 +4,13 @@ import java.util.Random;
 
 public class MeasurementGenerator {
 
-	protected Raster map;
+	protected Raster map;	// the given map
 	
-	private double[] measurements;
+	private double[] measurements;	// the computed measurements
 
-	protected RobotPosition position;
+	protected RobotPosition position;	// the robot position
 	
-	private ModelParameters parameters;
+	private ModelParameters parameters;	// sensor model parameters
 
 	public MeasurementGenerator(){
 	}
@@ -115,8 +115,9 @@ public class MeasurementGenerator {
 	private int[] extremeXY(int angle){
 		
 		int newXY[] = new int[2];
-		double tan = Math.tan(Math.toRadians(angle));
-		newXY[0] = chooseX(angle, (int) Math.floor((Math.sqrt(40000/(Math.pow(tan,2)+1)))+ position.getX()), (int) Math.floor(-(Math.sqrt(40000/(Math.pow(tan,2)+1)))+ position.getX())) ;
+		double tan = Math.tan(Math.toRadians(angle));	// we have to choose between the 2 possible values for further explanation check the report
+		newXY[0] = chooseX(angle, (int) Math.floor((Math.sqrt((Math.pow(parameters.getLaserRange()/(0.01*parameters.getCmPerPixel()), 2))/(Math.pow(tan,2)+1)))+ position.getX()),
+				(int) Math.floor(-(Math.sqrt((Math.pow(parameters.getLaserRange()/(0.01*parameters.getCmPerPixel()), 2))/(Math.pow(tan,2)+1)))+ position.getX())) ;
 
 		if(newXY[0] > map.getWidth()-1)
 			newXY[0] = map.getWidth()-1;
@@ -392,7 +393,8 @@ public class MeasurementGenerator {
 			prob[i] =probability(h,a1, a2, a3, a4,  z, zExp);
 		}
 		
-		double area = 0.0;
+		double area = 0.0;		// area is used for the calculation of
+								// the integral of the density function
 		
 		for(int i=0; i<prob.length-1; i++){
 			area =area+ (prob[i]+prob[i+1])*0.5;
