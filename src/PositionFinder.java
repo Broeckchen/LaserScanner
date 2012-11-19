@@ -33,6 +33,8 @@ public class PositionFinder {
 		map = loadMap();
 	}
 
+	//Mode one
+	
 	public double[][] generateMapSummingUp() {
 		double[][] gaussianSquare = gaussianSquare();
 
@@ -64,6 +66,8 @@ public class PositionFinder {
 
 		return probabilities;
 	}
+	
+	//Mode tow
 
 	public double[][] generateMapLowestDistance() {
 		maxLikelihood = 0.0;
