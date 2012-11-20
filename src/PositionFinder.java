@@ -11,10 +11,15 @@ import org.apache.commons.math3.util.FastMath;
 public class PositionFinder {
 
 	// the assumed standard deviation of the measurement in meter
-	private static final double STANDARD_DEVIATION = 0.25; 
+	private static final double STANDARD_DEVIATION = 0.2; 
 	// the distance in meter to an obstacle from where the likelihood will be assumed zero
-	private static final double CALCULATION_RANGE = 4* STANDARD_DEVIATION;
-	// the calculation range in pixels (on a straight horicontal/vertical line)
+	private static final double CALCULATION_RANGE = 3* STANDARD_DEVIATION;
+	// determines the number of different thetas which will be considered for a single X,Y position
+	private static final int THETA_STEPS = 5;
+	// the general probability to return the maximum measurement
+	private static final double MAX_MEASUREMENT_PROBABILITY = 0.1;
+		
+	// the calculation range in pixels (on a straight horizontal/vertical line)
 	private static final int PIXEL_CALCULATION_RANGE = (int) FastMath.floor(CALCULATION_RANGE / 0.05);
 	// the normal distribution of the distance to an obstacle
 	private static final NormalDistribution PRIOR = new NormalDistribution(0, STANDARD_DEVIATION);
@@ -24,25 +29,17 @@ public class PositionFinder {
 	private static final double MIN_PROBABILITY = PRIOR.density(CALCULATION_RANGE);
 	// the maximal measurement range
 	private static final double MAX_MEASUREMENT = 10.0;
-	// the general probability to return the maximum measurement
-	private static final double MAX_MEASUREMENT_PROBABILITY = 0.1;
 	
 	// the address of the map
 	private static final String MAP_ADDRESS = "ressources"+File.separator+"Assignment_5_Grid_Map.png";
-	
-	// the range of theta
-	private static final int THETA = 360;
-	// determines the number of different thetas which will be considered for a single X,Y position
-	private static final int THETA_STEPS = 1;
 	
 	// the original map
 	private final BufferedImage map;
 	// the two likelihood maps corresponding to the two different approaches
 	private double[][] summedUpLikelihoodMap;
 	private double[][] lowestDistanceLikelihoodMap;
-	// the probability of a maximum measurement after normalisation for lowest distance
-	private double lowestDistanceMaxMeasurementProbability;	
-	// the range of the map coordinates
+	// the range of the robot position values
+	private static final int THETA = 360;
 	private final int X;
 	private final int Y;
 	
@@ -93,6 +90,7 @@ public class PositionFinder {
 	 * Thanks to this gaussian square, the gaussian is only calculated a constant number of times;
 	 * Every time an black pixel (obstacle) is encountered in the map, the values from the
 	 * gaussian square are simply added to all surrounding pixels.
+	 * After that, all pixels still with zero probability get the minimal probability assigned as a random factor.
 	 * In the very end, the resulting probabilities are normalized in relation to
 	 * the maximum probability encountered during the generation of the probability grid.
 	 * This results in a grid of probabilities in the interval from 0.0 to 1.0;
@@ -103,7 +101,6 @@ public class PositionFinder {
 		double maxLikelihood = 0.0;
 		double[][] probabilities = new double[X][Y];
 		for (int i = 0; i < X; i++) {
-			System.out.println(i);
 			for (int j = 0; j < Y; j++) {
 				if (map.getRGB(i, j) == Color.BLACK.getRGB()) {
 					for (int k = i - PIXEL_CALCULATION_RANGE;
@@ -123,6 +120,70 @@ public class PositionFinder {
 				}
 			}
 		}
+		for(int i=0;i<X;i++){
+			for(int j=0;j<Y;j++){
+				if(probabilities[i][j] == 0){
+					probabilities[i][j] = MIN_PROBABILITY;
+				}
+			}
+		}
+
+		probabilities = normaliseProbabilities(probabilities, maxLikelihood);
+
+		return probabilities;
+	}
+		
+	/*
+	 * This function creates a normalized grid of probabilities
+	 * using the method to search for the lowest distance to an obstacle.
+	 * To reduce the running time there is a gaussian square created in the beginning according
+	 * to the calculation range in pixel, that includes the gaussian probabilities of all pixels
+	 * within the calculation range around any black pixel (obstacle).
+	 * Thanks to this gaussian square, the gaussian is only calculated a constant number of times;
+	 * Every time an black pixel (obstacle) is encountered in the map, the probability values for
+	 * all pixels around the grid, are set to the according value from the gaussian square if there
+	 * is not already a higher probability set. A higher set probability would have meant, that another
+	 * obstacle has been encountered before, which is nearer to that pixel.
+	 * After that, all pixels still with zero probability get the minimal probability assigned as a random factor.
+	 * In the very end, the resulting probabilities are normalized in relation to
+	 * the maximum probability encountered during the generation of the probability grid.
+	 * This results in a grid of probabilities in the interval from 0.0 to 1.0;
+	 */
+	private double[][] generateMapLowestDistance() {
+		double maxLikelihood = 0.0;
+		double[][] gaussianSquare = gaussianSquare();
+
+		double[][] probabilities = new double[X][Y];
+		for (int i = 0; i < X; i++) {
+			for (int j = 0; j < Y; j++) {
+				if (map.getRGB(i, j) == Color.BLACK.getRGB()) {
+					for (int k = i - PIXEL_CALCULATION_RANGE;
+							k <= i + PIXEL_CALCULATION_RANGE; k++) {
+						for (int l = j - PIXEL_CALCULATION_RANGE;
+								l <= j + PIXEL_CALCULATION_RANGE; l++) {
+							if (k >= 0 && k < X && l >= 0 && l < Y) {
+								double newProbability = gaussianSquare
+										[i - k + PIXEL_CALCULATION_RANGE]
+										[j - l + PIXEL_CALCULATION_RANGE];
+								if(probabilities[k][l] < newProbability){
+									probabilities[k][l] = newProbability;
+								}
+								if (probabilities[k][l] > maxLikelihood) {
+									maxLikelihood = probabilities[k][l];
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		for(int i=0;i<X;i++){
+			for(int j=0;j<Y;j++){
+				if(probabilities[i][j] == 0){
+					probabilities[i][j] = MIN_PROBABILITY;
+				}
+			}
+		}
 
 		probabilities = normaliseProbabilities(probabilities, maxLikelihood);
 
@@ -138,7 +199,7 @@ public class PositionFinder {
 	 * If the distance is bigger than the calculation range, the value at the position is set to 0.0.
 	 * This way, all relevant values of the gaussian distribution are contained in the resulting square.
 	 */
-	private double[][] gaussianSquare() {
+	public double[][] gaussianSquare() {
 		int gaussianSquareSize = 2 * PIXEL_CALCULATION_RANGE + 1;
 
 		double[][] gaussianSquare = new double[gaussianSquareSize][gaussianSquareSize];
@@ -152,52 +213,6 @@ public class PositionFinder {
 			}
 		}
 		return gaussianSquare;
-	}
-
-	/*
-	 * This function creates a normalized grid of probabilities
-	 * using the method to search for the lowest distance to an obstacle.
-	 * For every pixel, the nearest obstacle within the calculation range is determined.
-	 * Then the probability of the pixel is set to the gaussian probability
-	 * of the distance to that obstacle.
-	 * If no obstacle is encountered the probability is automatically set to the minimal probability,
-	 * e.g. the probability of exactly the calculation range.
-	 * In the very end, the resulting probabilities are normalized in relation to
-	 * the maximum probability encountered during the generation of the probability grid.
-	 * This results in a grid of probabilities in the interval from 0.0 to 1.0;
-	 */
-	private double[][] generateMapLowestDistance() {
-		double maxLikelihood = 0.0;
-		double[][] probabilities = new double[X][Y];
-		for (int i = 0; i < X; i++) {
-			System.out.println(i);
-			for (int j = 0; j < Y; j++) {
-				double smallestDistance = CALCULATION_RANGE;
-				for (int k = i - PIXEL_CALCULATION_RANGE;
-						k <= i + PIXEL_CALCULATION_RANGE; k++) {
-					for (int l = j - PIXEL_CALCULATION_RANGE;
-							l <= j + PIXEL_CALCULATION_RANGE; l++) {
-						if (k >= 0 && k < X && l >= 0 && l < Y) {
-							if (map.getRGB(k, l) == Color.BLACK.getRGB()) {
-								double newDistance = distance(k, l, i, j);
-								if (newDistance < smallestDistance) {
-									smallestDistance = newDistance;
-								}
-							}
-						}
-					}
-				}
-				probabilities[i][j] = PRIOR.density(smallestDistance);
-				if (probabilities[i][j] > maxLikelihood) {
-					maxLikelihood = probabilities[i][j];
-				}
-			}
-		}
-
-		probabilities = normaliseProbabilities(probabilities, maxLikelihood);
-		lowestDistanceMaxMeasurementProbability = MAX_MEASUREMENT_PROBABILITY/maxLikelihood;
-
-		return probabilities;
 	}
 	
 	/*
@@ -235,13 +250,10 @@ public class PositionFinder {
 	 */
 	public double[][] generateMap(double[] measurements, boolean lowestDistanceApproach) {
 		double[][] probabilities;
-		double maxMeasurementProbability;
 		if (lowestDistanceApproach) {
 			probabilities = lowestDistanceLikelihoodMap;
-			maxMeasurementProbability = lowestDistanceMaxMeasurementProbability;
 		} else {
 			probabilities = summedUpLikelihoodMap;
-			maxMeasurementProbability = MAX_MEASUREMENT_PROBABILITY;
 		}
 
 		double[][] likelihoods = new double[X][Y];
@@ -258,13 +270,13 @@ public class PositionFinder {
 							double distance = measurements[l];
 							int endpointX = findPixelX(i,angle,distance);
 							int endpointY = findPixelY(j,angle,distance);
-							if(endpointX<0 || endpointX>=X || endpointY<0 || endpointY>=Y){
+							if(endpointX<0 || endpointX>=X || endpointY<0 || endpointY>=Y || probabilities[endpointX][endpointY]==0){
 								likelihood += MIN_PROBABILITY;
 							}else{
 								likelihood += probabilities[endpointX][endpointY];
 							}
 							if(distance == MAX_MEASUREMENT){
-								likelihood += maxMeasurementProbability;
+								likelihood += MAX_MEASUREMENT_PROBABILITY;
 							}
 						}
 						if(likelihood>likelihoods[i][j]){
@@ -272,7 +284,6 @@ public class PositionFinder {
 						}
 					}
 					if(likelihoods[i][j]>maxLikelihood){
-						System.out.println("new highest likelihood found:" + likelihoods[i][j]);
 						maxLikelihood = likelihoods[i][j];
 					}
 				}
@@ -308,12 +319,14 @@ public class PositionFinder {
 	 */
 	private int findPixelX(int originX, int angle, double distance){
 		double realOriginX = (originX+0.5)*0.05;
-		double realX = realOriginX+distance*FastMath.cos(angle);
+		double radAngle = FastMath.toRadians(angle);
+		double realX = realOriginX+distance*FastMath.cos(radAngle);
 		return (int) FastMath.floor(20*realX);
 	}
 	private int findPixelY(int originY, int angle, double distance){
 		double realOriginY = (originY+0.5)*0.05;
-		double realY = realOriginY+distance*FastMath.sin(angle);
+		double radAngle = FastMath.toRadians(angle);
+		double realY = realOriginY+distance*FastMath.sin(radAngle);
 		return (int) FastMath.floor(20*realY);
 	}
 	
