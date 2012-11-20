@@ -23,11 +23,11 @@ public class MainClass {
 			 * every pixel has dimension 5cm x 5cm
 			 * laser greatest angle can be 135 degrees(135, -135)
 			 * laser angle range is 5
-			 * l parameter is 1
-			 * b parameter is 2
+			 * l parameter is 0.8
+			 * b parameter is 0.4
 			 * a small laser measurement is 0.1m 
 			 */
-			ModelParameters parameters  = new ModelParameters(10, 5, 135, 5, 1, 2, 0.1);
+			ModelParameters parameters  = new ModelParameters(10, 5, 135, 5, 0.8, 0.4, 0.1);
 			
 			double[] measurements = new double[parameters.getAngleRange()/parameters.getAngleStep()+1]; 
 			RobotPosition position = new RobotPosition(150, 200, 45); //define a position for the robot

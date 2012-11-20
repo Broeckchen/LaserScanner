@@ -7,7 +7,7 @@ public class MeasurementGenerator {
 	protected Raster map;	// the given map
 	
 	private double[] measurements;	// the computed measurements
-
+	private double[] realMeasurements;	// the computed measurements
 	protected RobotPosition position;	// the robot position
 	
 	private ModelParameters parameters;	// sensor model parameters
@@ -20,6 +20,7 @@ public class MeasurementGenerator {
 		this.position = pos;
 		this.parameters = param;
 		this.measurements = new double[((2*parameters.getAngleRange())/parameters.getAngleStep())+1];
+		this.realMeasurements = new double[((2*parameters.getAngleRange())/parameters.getAngleStep())+1];
 	}
 	
 	public Raster getMap() {
@@ -60,23 +61,28 @@ public class MeasurementGenerator {
 			
 			}else{				
 				xy = extremeXY( angle);
+				
 				obstacle = getFirstObstaclePosition(xy[0], xy[1], Math.tan(angle));	// expected measurement
 				
 			}
 			if(obstacle[0]>=0){	// if there is an obstacle we generate a measurement for it by giving its distance
 								// as input
-				 measurements[point] = generateLaserMeasurement( distance(obstacle[0], obstacle[1]));
-				 point++;
+				realMeasurements[point] = distance(obstacle[0], obstacle[1]);
+				measurements[point] = generateLaserMeasurement( distance(obstacle[0], obstacle[1])); 
+				point++;
 			}else{			// if no obstacle is found we give an expected value larger than our range
+				realMeasurements[point] = 0;
 				measurements[point] = generateLaserMeasurement(0.0);
-				 point++;
+				point++;
 			}
 		}
 		
 		return measurements;
 	}
 	
-		
+		public double[] getRealMeasurements(){
+			return realMeasurements;
+		}
 	/*
 	 * This function generates a measurement based on the expected measurement.
 	 * First we calculate a measurement and it's probability, then we check if this
@@ -95,7 +101,15 @@ public class MeasurementGenerator {
 		
 		double[] probalitiesPerMesurent = probabilityDensityFunction(zExp);
 
-		if(probalitiesPerMesurent[z]>=prob)
+		double probOfZ;
+		if(z-1>=0 &&z+1<probalitiesPerMesurent.length)
+			probOfZ= 3*((probalitiesPerMesurent[z-1]+probalitiesPerMesurent[z+1])/2);
+		else if(z-1<0){
+			probOfZ= 2*((probalitiesPerMesurent[z]+probalitiesPerMesurent[z+1])/2);
+		}else{
+			probOfZ= 2*((probalitiesPerMesurent[z-1]+probalitiesPerMesurent[z])/2);
+		}
+		if(probOfZ>=prob )
 			return (z*parameters.getCmPerPixel()*0.01);
 		else
 			return generateLaserMeasurement(zExp);
@@ -383,10 +397,10 @@ public class MeasurementGenerator {
 		double z,h= 1 ;
 		double a1, a2, a3, a4;
 		
-		a1 = 1.2;
-		a2 = 0.2;
+		a1 = 2.5;
+		a2 = 1;
 		a3 = 0.2;
-		a4 = 0.07;
+		a4 = 0.05;
 		
 		for(int i=0; i<prob.length; i++ ){
 			z = 0.05 * i;
