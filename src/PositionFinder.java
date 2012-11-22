@@ -283,9 +283,14 @@ public class PositionFinder {
 							likelihoods[i][j] = likelihood;
 						}
 					}
-					if(likelihoods[i][j]>maxLikelihood){
-						maxLikelihood = likelihoods[i][j];
-					}
+				}
+			}
+		}
+		for(int i=0;i<X;i++){
+			System.out.println(i);
+			for(int j=0;j<Y;j++){
+				if(likelihoods[i][j]>maxLikelihood){
+					maxLikelihood = likelihoods[i][j];
 				}
 			}
 		}
